@@ -8,15 +8,15 @@ import os
 app = Flask(__name__)
 CORS(app)
 
-# إعداد العميل بنموذج NVIDIA الجديد
+# إعداد محرك جينيسي السريع (Step-3.5-Flash)
 client = OpenAI(
     base_url="https://integrate.api.nvidia.com/v1",
     api_key="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"
 )
 
 @app.route('/')
-def home():
-    return "Genisi Engine (Step-3.5-Flash) is Flying! 🚀", 200
+def health_check():
+    return "Genisi Engine is Online! 🚀", 200
 
 @app.route('/genisi_engine', methods=['POST'])
 def genisi_engine():
@@ -25,11 +25,11 @@ def genisi_engine():
 
     def generate():
         try:
-            # طلب البث من NVIDIA
-            stream = client.chat.completions.create(
+            # طلب البث المباشر (Streaming)
+            completion = client.chat.completions.create(
                 model="stepfun-ai/step-3.5-flash",
                 messages=[
-                    {"role": "system", "content": "أنت جينيسي (Genisi)، مساعد ذكي وسريع جداً، طورك أنس (AnesNT). أجب بأسلوب مرح وذكي."},
+                    {"role": "system", "content": "أنت جينيسي (Genisi)، مساعد ذكي وسريع، طورك المبرمج أنس (AnesNT). أجب دائماً بروح مرحة وصديقة."},
                     {"role": "user", "content": user_input}
                 ],
                 temperature=1,
@@ -38,20 +38,19 @@ def genisi_engine():
                 stream=True
             )
 
-            for chunk in stream:
+            for chunk in completion:
+                # التحقق من وجود محتوى في الرد
                 if chunk.choices and chunk.choices[0].delta.content:
-                    # نرسل البيانات بتنسيق يفهمه الـ index.html الخاص بنا
-                    content = chunk.choices[0].delta.content
-                    yield f"data: {json.dumps({'choices': [{'delta': {'content': content}}]})}\n\n"
+                    text = chunk.choices[0].delta.content
+                    # نرسل البيانات بتنسيق EventStream
+                    yield f"data: {json.dumps({'choices': [{'delta': {'content': text}}]})}\n\n"
             
-            yield "data: [DONE]\n\n"
-
         except Exception as e:
-            yield f"data: {json.dumps({'choices': [{'delta': {'content': 'خطأ: ' + str(e)}}]})}\n\n"
+            yield f"data: {json.dumps({'choices': [{'delta': {'content': 'خطأ تقني: ' + str(e)}}]})}\n\n"
 
     return Response(stream_with_context(generate()), mimetype='text/event-stream')
 
 if __name__ == '__main__':
-    # بورت Render التلقائي
+    # تشغيل السيرفر على البورت الصحيح لـ Render
     port = int(os.environ.get("PORT", 5000))
     app.run(host='0.0.0.0', port=port)
