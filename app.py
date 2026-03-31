@@ -27,7 +27,7 @@ def genisi_engine():
         try:
             # طلب البث المباشر (Streaming)
             completion = client.chat.completions.create(
-                model="stepfun-ai/step-3.5-flash",
+                model="openai/gpt-oss-120b",
                 messages=[
                     {"role": "system", "content": "أنت جينيسي (Genisi)، مساعد ذكي وسريع، طورك المبرمج أنس (AnesNT). أجب دائماً بروح مرحة وصديقة."},
                     {"role": "user", "content": user_input}
