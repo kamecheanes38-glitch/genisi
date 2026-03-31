@@ -16,7 +16,11 @@ CORS(app, resources={r"/*": {
 
 client = OpenAI(
     api_key="sk-scitely-c9c3eb789bc3bf41ad5f8047dc808cb587db4f7923d69af449ad60317d76e370",
-    base_url="https://api.scitely.com/v1"
+    base_url="https://api.scitely.com/v1",
+    default_headers={
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+        "Accept": "application/json",
+    }
 )
 
 @app.route('/')
