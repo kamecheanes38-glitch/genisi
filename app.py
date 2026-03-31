@@ -1,63 +1,36 @@
 # -*- coding: utf-8 -*-
-from flask import Flask, request, jsonify
+from flask import Flask, request, Response, stream_with_context
 from flask_cors import CORS
 from openai import OpenAI
+import json
 import os
 
 app = Flask(__name__)
-# السماح بجميع المصادر لضمان عمل الواجهة من أي مكان
-CORS(app, resources={r"/*": {"origins": "*"}})
+CORS(app)
 
 client = OpenAI(
     api_key="sk-scitely-c9c3eb789bc3bf41ad5f8047dc808cb587db4f7923d69af449ad60317d76e370",
     base_url="https://api.scitely.com/v1"
 )
 
-# ذاكرة الجلسات (تخزن في الرام مؤقتاً)
-sessions = {}
-
-@app.route('/')
-def home():
-    return "Genisi Engine is Running! 🚀", 200
-
-@app.route('/genisi_engine', methods=['POST', 'OPTIONS'])
+@app.route('/genisi_engine', methods=['POST'])
 def genisi_engine():
-    if request.method == 'OPTIONS':
-        return '', 200
+    data = request.json
+    user_input = data.get("message", "")
 
-    try:
-        data = request.json
-        user_input = data.get("message", "")
-        uid = data.get("uid", "guest_user")
-        
-        # إدارة الذاكرة (حفظ آخر 6 رسائل لتركيز أفضل)
-        if uid not in sessions: sessions[uid] = []
-        history = sessions[uid][-6:]
-
-        # نظام التوجيه (Thinking vs Normal)
-        model = "qwen3-235b-thinking" if any(x in user_input for x in ["حل", "برمج", "لماذا"]) else "deepseek-v3.2"
-        
-        messages = [
-            {"role": "system", "content": "أنت جينيسي، مساعد ذكي ومرح طوره AnesNT. واجهتك تشبه جيميناي وردودك منظمة."}
-        ] + history + [{"role": "user", "content": user_input}]
-
-        completion = client.chat.completions.create(
-            model=model,
-            messages=messages,
-            temperature=0.7
+    def generate():
+        stream = client.chat.completions.create(
+            model="deepseek-v3.2", # تأكد من اسم الموديل المدعوم في Scitely
+            messages=[{"role": "user", "content": user_input}],
+            stream=True
         )
-        
-        ai_reply = completion.choices[0].message.content
+        for chunk in stream:
+            if chunk.choices[0].delta.content:
+                content = chunk.choices[0].delta.content
+                # نرسل البيانات بتنسيق يفهمه المتصفح (SSE)
+                yield f"data: {json.dumps({'content': content})}\n\n"
 
-        # تحديث التاريخ
-        sessions[uid].append({"role": "user", "content": user_input})
-        sessions[uid].append({"role": "assistant", "content": ai_reply})
-
-        return jsonify({"reply": ai_reply, "model": model})
-
-    except Exception as e:
-        return jsonify({"error": str(e)}), 500
+    return Response(stream_with_context(generate()), mimetype='text/event-stream')
 
 if __name__ == '__main__':
-    port = int(os.environ.get("PORT", 5000))
-    app.run(host='0.0.0.0', port=port)
+    app.run(host='0.0.0.0', port=int(os.environ.get("PORT", 5000)))
