@@ -8,56 +8,51 @@ import os
 app = Flask(__name__)
 CORS(app)
 
-API_KEY = "sk-scitely-c9c3eb789bc3bf41ad5f8047dc808cb587db4f7923d69af449ad60317d76e370"
+# ضع مفتاح NVIDIA الخاص بك هنا
+NVIDIA_API_KEY = "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" 
+INVOKE_URL = "https://integrate.api.nvidia.com/v1/chat/completions"
 
 @app.route('/')
 def home():
-    return "Genisi is Live! 🚀", 200
+    return "Genisi Engine is Active! 🌟", 200
 
 @app.route('/genisi_engine', methods=['POST'])
 def genisi_engine():
     data = request.json
-    user_msg = data.get("message", "")
-    img_url = data.get("image_url", None)
-
-    # اختيار الموديل
-    selected_model = "qwen3-vl-plus" if img_url else "deepseek-v3"
-
-    # التنسيق المباشر (Raw Payload)
-    payload = {
-        "model": selected_model,
-        "messages": [{"role": "user", "content": user_msg}],
-        "stream": True
+    user_input = data.get("message", "")
+    
+    headers = {
+        "Authorization": f"Bearer {NVIDIA_API_KEY}",
+        "Accept": "text/event-stream",
+        "Content-Type": "application/json"
     }
 
-    # إضافة صورة إذا وجدت
-    if img_url:
-        payload["messages"][0]["content"] = [
-            {"type": "text", "text": user_msg},
-            {"type": "image_url", "image_url": {"url": img_url}}
-        ]
+    # هنا نضع "الروح" لجينيسي في رسالة النظام (System Message)
+    payload = {
+        "model": "moonshotai/kimi-k2.5",
+        "messages": [
+            {
+                "role": "system", 
+                "content": "أنت 'جينيسي' (Genisi)، مساعد ذكي ومرح وصديق مقرب للمبرمج أنس (Anes). لقد تم تطويرك بواسطة AnesNT. أجب دائماً بذكاء، وكن فخوراً بهويتك كمحرك جينيسي."
+            },
+            {"role": "user", "content": user_input}
+        ],
+        "max_tokens": 16384,
+        "temperature": 0.8,
+        "top_p": 1.00,
+        "stream": True,
+        "chat_template_kwargs": {"thinking": False},
+    }
 
     def generate():
-        # هنا السر: إرسال الطلب كأنه متصفح (Headers بشرية)
-        headers = {
-            "Authorization": f"Bearer {API_KEY}",
-            "Content-Type": "application/json",
-            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) Chrome/120.0.0.0 Safari/537.36"
-        }
-        
         try:
-            response = requests.post(
-                "https://api.scitely.com/v1/chat/completions",
-                headers=headers,
-                json=payload,
-                stream=True,
-                timeout=60
-            )
+            response = requests.post(INVOKE_URL, headers=headers, json=payload, stream=True)
             
             for line in response.iter_lines():
                 if line:
-                    # تمرير السطر كما هو للواجهة الأمامية
-                    yield f"{line.decode('utf-8')}\n\n"
+                    decoded_line = line.decode("utf-8")
+                    # تمرير البيانات المباشرة للواجهة (index.html)
+                    yield f"{decoded_line}\n\n"
         except Exception as e:
             yield f"data: {json.dumps({'error': str(e)})}\n\n"
 
