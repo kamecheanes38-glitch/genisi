@@ -1,0 +1,27 @@
+use_default_settings: true
+
+server:
+  port: 7860
+  bind_address: "0.0.0.0"
+  secret_key: "surfgo_stable_anesnt_2026"
+  limiter: false
+
+ui:
+  title: "SurfGO"
+  theme: simple
+
+search:
+  safe_search: 0
+  autocomplete: duckduckgo
+  formats:
+    - html
+    - json
+
+# تعطيل جميع المحركات وتفعيل DuckDuckGo فقط لتفادي خطأ 503
+engines:
+  - name: duckduckgo
+    engine: duckduckgo
+    shortcut: d
+
+# إيقاف أي محرك إضافي قد يسبب انهيار النظام
+# هذه الخطوة تضمن أن السيرفر لن يحاول الاتصال بجوجل أو غيره
